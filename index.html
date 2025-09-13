@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dental Image Analyzer (API Version)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .loader-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="gradient-bg text-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-4xl mx-auto">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-2">Dental Image Analyzer AI</h1>
+            <p class="text-lg text-gray-200">Upload a teeth image for an AI-powered analysis.</p>
+        </header>
+
+        <!-- Medical Disclaimer -->
+        <div id="disclaimer" class="bg-red-500/80 border-2 border-red-700 text-white p-4 rounded-lg mb-8 shadow-lg">
+            <h3 class="font-bold text-lg mb-2">⚠️ Important Medical Disclaimer</h3>
+            <p class="text-sm">This tool provides an AI-generated analysis for educational purposes only and is **NOT** a substitute for a professional medical or dental diagnosis. The analysis may not be accurate or complete. Always consult a qualified dentist for any health concerns. Do not disregard professional dental advice because of something you have read here.</p>
+        </div>
+
+        <main class="glass-card rounded-2xl shadow-2xl p-6 md:p-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Image Upload Section -->
+                <div class="flex flex-col items-center justify-center">
+                    <div id="image-uploader" class="w-full h-64 border-2 border-dashed border-gray-400 rounded-xl flex flex-col justify-center items-center text-center cursor-pointer hover:bg-white/10 transition-colors">
+                        <input type="file" id="file-input" class="hidden" accept="image/*">
+                        <div id="upload-prompt">
+                            <svg class="w-16 h-16 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            <p class="mt-2 text-gray-200">Click to upload an image</p>
+                            <p class="text-xs text-gray-400">PNG, JPG, JPEG</p>
+                        </div>
+                        <img id="image-preview" src="#" alt="Uploaded Image" class="hidden w-full h-full object-contain rounded-xl"/>
+                    </div>
+                    <button id="analyze-button" class="mt-4 bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg w-full hover:bg-indigo-600 transition-transform transform hover:scale-105 disabled:bg-gray-500 disabled:cursor-not-allowed disabled:scale-100" disabled>
+                        Analyze Image
+                    </button>
+                </div>
+
+                <!-- Analysis Section -->
+                <div id="analysis-section">
+                    <h2 class="text-2xl font-bold mb-4 border-b-2 border-gray-500 pb-2">Analysis Results</h2>
+                    <div id="loader" class="hidden loader-container">
+                        <div class="loader"></div>
+                        <p class="mt-3 text-gray-300">Analyzing... Please wait.</p>
+                    </div>
+                    <div id="analysis-output" class="hidden space-y-6 text-sm">
+                        <!-- Content will be injected by JavaScript -->
+                    </div>
+                     <div id="placeholder-text" class="text-gray-400">
+                        The analysis of your uploaded image will appear here. Please upload an image and click "Analyze".
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const imageUploader = document.getElementById('image-uploader');
+        const fileInput = document.getElementById('file-input');
+        const uploadPrompt = document.getElementById('upload-prompt');
+        const imagePreview = document.getElementById('image-preview');
+        const analyzeButton = document.getElementById('analyze-button');
+        const analysisOutput = document.getElementById('analysis-output');
+        const placeholderText = document.getElementById('placeholder-text');
+        const loader = document.getElementById('loader');
+
+        let uploadedImage = null; 
+
+        imageUploader.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                    imagePreview.classList.remove('hidden');
+                    uploadPrompt.classList.add('hidden');
+                    analyzeButton.disabled = false;
+                    uploadedImage = {
+                        data: e.target.result.split(',')[1],
+                        mimeType: file.type
+                    };
+                };
+                reader.readAsDataURL(file);
+                analysisOutput.innerHTML = '';
+                analysisOutput.classList.add('hidden');
+                placeholderText.classList.remove('hidden');
+            }
+        });
+
+        analyzeButton.addEventListener('click', async () => {
+            if (!uploadedImage) {
+                alert('Please upload an image first.');
+                return;
+            }
+            
+            // --- IMPORTANT ---
+            // PASTE YOUR GOOGLE AI API KEY IN THE LINE BELOW
+            // Get one for free from Google AI Studio: https://aistudio.google.com/app/apikey
+            const apiKey = "AIzaSyDPw8yup5Tl8r3MRi0gMUbEtq8GsjiiX5E";
+
+            if (apiKey === "YOUR_API_KEY_GOES_HERE") {
+                alert("Please replace 'YOUR_API_KEY_GOES_HERE' with your actual Google AI API key in the code.");
+                return;
+            }
+
+            loader.classList.remove('hidden');
+            analysisOutput.classList.add('hidden');
+            placeholderText.classList.add('hidden');
+            analyzeButton.disabled = true;
+
+            try {
+                const analysis = await callGeminiAPI(apiKey, uploadedImage.data, uploadedImage.mimeType);
+                displayAnalysis(analysis);
+            } catch (error) {
+                console.error('Detailed Error:', error);
+                analysisOutput.innerHTML = `<div class="bg-red-500/30 p-4 rounded-lg">
+                    <p class="font-semibold text-red-200">Analysis Failed</p>
+                    <p class="text-red-300">The AI model did not respond as expected. This could be due to an invalid API key, network issues, or high traffic. Please check your key and try again.</p>
+                    <p class="text-xs text-red-400 mt-2">Error details have been logged to the browser console (F12).</p>
+                </div>`;
+            } finally {
+                loader.classList.add('hidden');
+                analysisOutput.classList.remove('hidden');
+                analyzeButton.disabled = false;
+            }
+        });
+
+        async function callGeminiAPI(apiKey, imageData, imageMimeType) {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            const prompt = `
+                Analyze the provided image of teeth from a dental health educator's perspective.
+                Do not provide a medical diagnosis. Provide a general analysis based on visible features.
+                Structure your response in JSON format:
+                {
+                  "generalObservations": ["Observation 1", "Observation 2"],
+                  "potentialIssues": [
+                    {"issue": "Visible Plaque or Tartar", "description": "Describe what this looks like and its implications."},
+                    {"issue": "Potential Cavities (Caries)", "description": "Describe visible signs, emphasizing a dentist's confirmation is needed."},
+                    {"issue": "Gum Health (Gingiva)", "description": "Comment on the visible color and shape of gums."},
+                    {"issue": "Staining", "description": "Describe stains and common causes."},
+                    {"issue": "Dental Work", "description": "Note any visible fillings, crowns, etc."}
+                  ],
+                  "recommendation": {
+                    "shouldSeeDentist": "Yes/No/Uncertain",
+                    "urgency": "Low/Medium/High",
+                    "reasoning": "Explain the recommendation. Always encourage regular check-ups."
+                  }
+                }
+                Only include potential issues visually suggested. If the image is not of teeth, respond with: {"error": "The uploaded image does not appear to be of teeth."}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: imageMimeType, data: imageData } }] }],
+                generationConfig: { responseMimeType: "application/json" }
+            };
+            
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                let errorBody = 'Could not read error response.';
+                try { errorBody = await response.text(); } catch (e) { /* ignore */ }
+                throw new Error(`API request failed with status ${response.status}: ${errorBody}`);
+            }
+
+            const result = await response.json();
+            const candidate = result.candidates?.[0];
+
+            if (!candidate || !candidate.content?.parts?.[0]?.text) {
+                throw new Error('Invalid response structure from the AI model.');
+            }
+            return JSON.parse(candidate.content.parts[0].text);
+        }
+
+        function displayAnalysis(data) {
+            if (data.error) {
+                analysisOutput.innerHTML = `<div class="bg-yellow-500/30 p-4 rounded-lg"><p class="font-semibold text-yellow-200">Analysis Error</p><p class="text-yellow-300">${data.error}</p></div>`;
+                return;
+            }
+
+            let html = '';
+            const { recommendation, generalObservations, potentialIssues } = data;
+
+            let bgColor = 'bg-green-500/30', title = 'Routine Check-up Recommended', icon = '✅';
+            if (recommendation.shouldSeeDentist.toLowerCase() === 'yes') {
+                bgColor = 'bg-red-500/30'; title = 'Consult a Dentist'; icon = '🚨';
+            }
+            html += `<div class="${bgColor} p-4 rounded-lg shadow-md">
+                <h3 class="text-lg font-bold mb-2">${icon} ${title}</h3>
+                <p class="text-gray-200">${recommendation.reasoning}</p>
+            </div>`;
+            
+            if (generalObservations?.length > 0) {
+                html += `<div class="glass-card p-4 rounded-lg">
+                    <h3 class="font-semibold text-lg mb-2 text-white">General Observations</h3>
+                    <ul class="list-disc list-inside space-y-1 text-gray-300">
+                        ${generalObservations.map(obs => `<li>${obs}</li>`).join('')}
+                    </ul>
+                </div>`;
+            }
+
+            if (potentialIssues?.length > 0) {
+                html += `<div class="glass-card p-4 rounded-lg">
+                    <h3 class="font-semibold text-lg mb-2 text-white">Potential Issues to Discuss with a Dentist</h3>
+                    <div class="space-y-3">
+                        ${potentialIssues.map(item => `
+                            <div class="border-l-4 border-yellow-400 pl-3">
+                                <p class="font-semibold text-yellow-200">${item.issue}</p>
+                                <p class="text-gray-300">${item.description}</p>
+                            </div>`).join('')}
+                    </div>
+                </div>`;
+            }
+            analysisOutput.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
+
